@@ -8,28 +8,19 @@ pipeline {
 
     stages {
 
-        // Start SonarQube Server
-        stage("Start SonarQube Server"){
-            steps{
-                echo "====++++  Start SonarQube Server ++++===="
-                
-                sh " sudo docker run -d --add-host=host.docker.internal:172.17.0.1 --name my-sonarqube -p 9000:9000 sonarqube:lts"                    
-                
-            }
-        }
 
       // Clone from Git
         stage("Clone App from Git"){
             steps{
                 echo "====++++  Clone App from Git ++++===="
-                git branch:"master", url: "https://github.com/mromdhani/challenge-09-ci-cd-jenkins-ansible.git"
+                git branch:"master", url: "https://github.com/abdallawi/pipeline-jenkins-ansible-docker.git"
             }          
         }
         // Build and Unit Test (Maven/JUnit)
         stage("Build and Package"){
             steps{
                 echo "====++++  Build and Unit Test (Maven/JUnit) ++++===="
-                sh "mvn clean package"
+                sh "mvn -f greetings-app/pom.xml clean package"
             }           
         }  
 
@@ -38,7 +29,7 @@ pipeline {
             steps{
                 echo "====++++  Static Code Analysis (SonarQube) ++++===="                
           //      withSonarQubeEnv('my_sonarqube_in_docker') {  
-                sh "mvn clean package clean package -Dsurefire.skip=true sonar:sonar -Dsonar.host.url=http://172.17.0.1:9000   -Dsonar.projectName=challenge-09-ci-cd-jenkins-ansible -Dsonar.projectVersion=$BUILD_NUMBER";
+                sh "mvn -f greetings-app/pom.xml clean package -Dsurefire.skip=true sonar:sonar -Dsonar.host.url=http://localhost:9000   -Dsonar.projectName=challenge-09-ci-cd-jenkins-ansible -Dsonar.projectVersion=$BUILD_NUMBER";
              
            //     }  
             }           
@@ -51,19 +42,19 @@ pipeline {
                 
                 echo "====++++  Deploy WAR on staging using Ansible ++++===="
       
-                ansiblePlaybook(credentialsId: 'ssh-on-server-staging', 
-                                  inventory:  "$WORKSPACE/ansible/hosts", 
-                                  playbook: 'ansible/playbook-deploy-staging.yaml')          
+                ansiblePlaybook(credentialsId: 'ssh-key-for-server-staging', 
+                                  inventory:  "$WORKSPACE/config-as-code/ansible/hosts", 
+                                  playbook: '$WORKSPACE/config-as-code/ansible/playbook-deploy-staging.yaml')          
             } 
         }
 
 
          // Stop SonarQube Server
-        stage("Stop SonarQube Server"){
-            steps{
-                echo "====++++  Stop SonarQube Server ++++===="
-                sh "sudo docker stop my-sonarqube && sudo docker rm my-sonarqube" 
-            }          
-        }        
+        //stage("Stop SonarQube Server"){
+           // steps{
+                //echo "====++++  Stop SonarQube Server ++++===="
+               // sh "sudo docker stop my-sonarqube && sudo docker rm my-sonarqube" 
+            //}          
+        //}        
     }
 }
